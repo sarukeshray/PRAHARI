@@ -64,3 +64,99 @@ shadcn/ui's CLI now targets by default. Practical differences: configuration
 lives in `src/index.css` under `@theme` instead of `tailwind.config.js`, and the
 build runs through the `@tailwindcss/vite` plugin rather than PostCSS. The
 severity palette from §11 is defined as design tokens in that file.
+
+---
+
+## D-004 — Prototype pivot: three roles, placeholder data, no backend dependency
+
+**Phase:** prototype
+**Supersedes:** the original build spec's "District Authority only" scope
+
+The prototype is a UI-first artefact for the internal pitch round. It ships three
+of the product's six roles — District Authority (deep), Member of Parliament and
+Ministry — and reads a placeholder dataset compiled into the frontend rather than
+calling the API.
+
+Consequences worth knowing:
+
+- `npm run dev` alone runs the whole prototype. The FastAPI backend from Phase 0
+  is untouched and still starts, but nothing in the UI depends on it.
+- Review actions are real but in-memory: Investigate / Override / Clear change
+  finding state and write an audit entry, and a reload restores the starting
+  state. That is deliberate — a demo should be repeatable.
+- `src/data/types.ts` mirrors the eSAKSHI-derived schema, so wiring the real
+  engine in later is a data-source swap rather than a rewrite of the screens.
+- State Nodal Authority, Implementing Agency and the public portal are named on
+  the role screen and marked "not built" rather than shipped as empty shells.
+
+---
+
+## D-005 — React 19, not React 18
+
+**Phase:** prototype
+**Spec reference:** §3 ("React 18 + TypeScript + Vite")
+
+The current Vite React-TS template installs React 19, and `react-leaflet` v5 —
+the current release — requires it. Pinning back to 18 would have meant pinning
+react-leaflet to v4 as well. Nothing in the build depends on React 19-specific
+behaviour, so a downgrade later is mechanical.
+
+---
+
+## D-006 — The specified severity palette fails colour-vision validation
+
+**Phase:** prototype
+**Spec reference:** §11 ("LOW slate, MEDIUM amber, HIGH orange, CRITICAL red")
+
+Running the four specified colours through a palette validator returns a hard
+failure, and re-stepping the hues three times did not fix it:
+
+```
+[FAIL] CVD separation      #c4460b <-> #a9670c  ΔE 0.7 (deuteranopia)
+[FAIL] Normal-vision floor #c4460b <-> #a9670c  ΔE 8.2 — below the floor of 15
+```
+
+MEDIUM amber and HIGH orange are effectively the same colour to a reader with
+deuteranopia, and hard to separate even with full colour vision. Amber, orange
+and red are close to collinear in hue, so no four-step slate→amber→orange→red
+ramp can pass as a categorical palette.
+
+The specified colours are kept, because the fix is not a different palette:
+
+1. **Chips** carry the tier as text and use a solid fill for HIGH and CRITICAL
+   against an outline for LOW and MEDIUM, so hue is never the only signal.
+2. **Map markers** encode tier by radius as well as colour.
+3. **Charts** never place two warm tiers side by side — see D-007.
+
+**This needs deciding before the real build.** The honest options are to accept
+the redundant encoding above as permanent, or to renumber the tiers onto a
+palette that passes on its own. The current approach works but depends on every
+future screen remembering to add the second encoding.
+
+---
+
+## D-007 — Charts are single-hue or small multiples, never stacked categorical
+
+**Phase:** prototype
+**Spec reference:** §11.4 ("Flags raised per month by module (stacked bar)")
+
+A stacked bar needs one distinguishable hue per module. With nine modules that
+requires a nine-colour categorical palette, which would both fail the validation
+in D-006 and contradict this design system's rule that colour is information.
+
+Findings-per-month is drawn instead as small multiples: one panel per module on a
+shared scale, all in the same blue. Severity-over-time is likewise one panel per
+tier, each labelled. Every other chart is a single-hue bar. Nothing in the
+prototype asks a reader to tell two colours apart to read a value.
+
+---
+
+## D-008 — `react-leaflet-cluster` removed
+
+**Phase:** prototype
+**Amends:** D-002
+
+Marker clustering was dropped. `CircleMarker` encodes severity by both radius and
+colour, which clustering into a single count bubble would have thrown away, and
+at this data volume clustering solved a problem the map does not have. This
+removes the only genuinely discretionary dependency flagged in D-002.

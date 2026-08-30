@@ -1,49 +1,82 @@
-import { useQuery } from '@tanstack/react-query'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
-import { apiGet, type HealthResponse } from '@/api/client'
-import { SyntheticDataBadge } from '@/components/SyntheticDataBadge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AppShell } from '@/components/AppShell'
+import { ReviewProvider } from '@/lib/reviewStore'
+import { Backtest } from '@/pages/district/Backtest'
+import { DistrictMap } from '@/pages/district/DistrictMap'
+import { ReviewQueue } from '@/pages/district/ReviewQueue'
+import { Trends } from '@/pages/district/Trends'
+import { WorkDetail } from '@/pages/district/WorkDetail'
+import { MinistryOverview } from '@/pages/ministry/MinistryOverview'
+import { MPOverview } from '@/pages/mp/MPOverview'
+import { RoleSelect } from '@/pages/RoleSelect'
 
 export default function App() {
-  const health = useQuery({
-    queryKey: ['health'],
-    queryFn: () => apiGet<HealthResponse>('/health'),
-  })
-
   return (
-    <div className="min-h-screen bg-background">
-      <SyntheticDataBadge />
+    <ReviewProvider>
+      <Routes>
+        <Route path="/" element={<RoleSelect />} />
 
-      <header className="border-b px-6 py-3">
-        <h1 className="text-base font-semibold tracking-tight">PRAHARI</h1>
-        <p className="text-xs text-muted-foreground">
-          Preventive oversight screening — MPLAD Scheme
-        </p>
-      </header>
+        <Route
+          path="/district"
+          element={
+            <AppShell role="district">
+              <ReviewQueue />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/district/works/:workId"
+          element={
+            <AppShell role="district">
+              <WorkDetail />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/district/map"
+          element={
+            <AppShell role="district">
+              <DistrictMap />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/district/trends"
+          element={
+            <AppShell role="district">
+              <Trends />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/district/backtest"
+          element={
+            <AppShell role="district">
+              <Backtest />
+            </AppShell>
+          }
+        />
 
-      <main className="p-6">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="text-sm">Scaffold status</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm">
-            {health.isPending && <p className="text-muted-foreground">Contacting API…</p>}
-            {health.isError && (
-              <p className="text-severity-high">API unreachable — is uvicorn running on :8000?</p>
-            )}
-            {health.data && (
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                <dt className="text-muted-foreground">API</dt>
-                <dd>{health.data.status}</dd>
-                <dt className="text-muted-foreground">Engine</dt>
-                <dd>v{health.data.engine_version}</dd>
-                <dt className="text-muted-foreground">Database</dt>
-                <dd>{health.data.db_backend}</dd>
-              </dl>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+        <Route
+          path="/mp"
+          element={
+            <AppShell role="mp">
+              <MPOverview />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/ministry"
+          element={
+            <AppShell role="ministry">
+              <MinistryOverview />
+            </AppShell>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ReviewProvider>
   )
 }

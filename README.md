@@ -95,6 +95,25 @@ frontend/src/
 cd backend && ./.venv/Scripts/pytest.exe
 ```
 
-## Status
+## Prototype status
 
-Phase 0 (scaffold) complete. See `DECISIONS.md` for departures from the spec.
+The current build is a **UI prototype**: three of the six roles, on a placeholder
+dataset compiled into the frontend. It runs with `npm run dev` alone — the
+backend is not required.
+
+| Screen | Role | State |
+|---|---|---|
+| Review queue | District Authority | Built |
+| Work detail, findings, review workflow | District Authority | Built |
+| District map | District Authority | Built |
+| Trends | District Authority | Built |
+| CAG backtest | District Authority | Built |
+| My recommendations | Member of Parliament | Built |
+| National overview | Ministry (MoSPI) | Built |
+| State Nodal, Implementing Agency, Public | — | Named, not built |
+
+The engine itself is not wired in yet: Phase 0 (scaffold) is complete on the
+backend, and Phases 1–7 build the real Stage 1 and Stage 2 modules behind it.
+
+`DESIGN.md` records the visual system and why each choice was made.
+`DECISIONS.md` records every departure from the build specification.

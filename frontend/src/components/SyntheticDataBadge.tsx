@@ -1,16 +1,17 @@
 /**
- * Mandatory data-provenance notice (§7 of the specification).
+ * Mandatory data-provenance notice.
  *
- * Every screen that displays data must carry this badge, and it must not be
- * dismissible.  It deliberately has no close control.
+ * Every screen that shows data carries this, and it has no dismiss control by
+ * design — a reader arriving mid-demo must never be able to mistake these
+ * records for live MPLADS data.
  */
 export function SyntheticDataBadge() {
   return (
     <div
       role="note"
-      className="flex items-center gap-2 border-b border-amber-300 bg-amber-50 px-4 py-1.5 text-xs font-medium text-amber-900"
+      className="flex items-center gap-2 border-b border-notice-rule bg-notice px-4 py-1 text-[11px] font-medium text-notice-ink"
     >
-      <span aria-hidden className="inline-block size-1.5 rounded-full bg-amber-500" />
+      <span aria-hidden className="inline-block size-1.5 rounded-full bg-[#c79a1e]" />
       Synthetic demonstration data — not live MPLADS records
     </div>
   )
