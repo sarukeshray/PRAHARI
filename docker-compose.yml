@@ -1,0 +1,31 @@
+# PostgreSQL + PostGIS for the PRAHARI analytics core.
+#
+# The application defaults to SQLite so that a checkout runs with no container
+# runtime present (see DECISIONS.md, D-001).  To use Postgres instead:
+#
+#   docker compose up -d
+#   cd backend && cp .env.example .env      # then set DB_BACKEND=postgres
+#   alembic upgrade head
+#
+# The SQLAlchemy models are backend-agnostic, so no code changes are required.
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: prahari-db
+    environment:
+      POSTGRES_USER: prahari
+      POSTGRES_PASSWORD: prahari
+      POSTGRES_DB: prahari
+    ports:
+      - "5432:5432"
+    volumes:
+      - prahari-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prahari -d prahari"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  prahari-pgdata:
