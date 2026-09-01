@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.engine import explain
@@ -27,7 +27,7 @@ from app.engine.stage1 import (
 )
 from app.engine.stage2 import cost_variance, geotag_verification, payment_progress, timeline
 from app.engine.stage3 import handover
-from app.models.enums import ModuleCode, Stage, WorkStatus
+from app.models.enums import FlagStatus, ModuleCode, Stage, WorkStatus
 from app.models.risk import ModuleContribution, RiskAssessment, RiskFlag
 from app.models.works import Work
 
@@ -75,11 +75,17 @@ def run_stage(
 
 
 def persist(db: Session, assessment: Assessment) -> RiskAssessment:
-    """Write an assessment, replacing any earlier one for the same work and stage.
+    """Write an assessment, superseding any earlier one for the same work and stage.
 
-    Reviews already recorded against a previous finding are preserved by leaving
-    decided findings in place: only OPEN findings are replaced on a re-run, so a
-    reviewer's decision is never silently discarded by rescoring.
+    A decision a person has recorded must survive rescoring. Only OPEN findings
+    are cleared on a re-run; anything a reviewer has acted on stays, and the
+    assessment it was raised under stays with it, because that is the record the
+    decision was made against.
+
+    Deletion is done with bulk statements rather than ``db.delete(row)``. The ORM
+    relationship cascades from an assessment to its findings, so deleting the
+    parent would have taken the reviewed findings with it - which is exactly the
+    silent loss this function claims to prevent.
     """
     previous = db.scalars(
         select(RiskAssessment).where(
@@ -87,15 +93,32 @@ def persist(db: Session, assessment: Assessment) -> RiskAssessment:
             RiskAssessment.stage == assessment.stage,
         )
     ).all()
+
     for old in previous:
-        db.execute(delete(ModuleContribution).where(
-            ModuleContribution.assessment_id == old.assessment_id
-        ))
-        db.execute(delete(RiskFlag).where(
-            RiskFlag.assessment_id == old.assessment_id,
-            RiskFlag.status == "OPEN",
-        ))
-        db.delete(old)
+        db.execute(
+            delete(ModuleContribution).where(
+                ModuleContribution.assessment_id == old.assessment_id
+            )
+        )
+        db.execute(
+            delete(RiskFlag).where(
+                RiskFlag.assessment_id == old.assessment_id,
+                RiskFlag.status == FlagStatus.OPEN,
+            )
+        )
+        db.flush()
+
+        remaining = db.scalar(
+            select(func.count())
+            .select_from(RiskFlag)
+            .where(RiskFlag.assessment_id == old.assessment_id)
+        )
+        if not remaining:
+            db.execute(
+                delete(RiskAssessment).where(
+                    RiskAssessment.assessment_id == old.assessment_id
+                )
+            )
     db.flush()
 
     row = RiskAssessment(

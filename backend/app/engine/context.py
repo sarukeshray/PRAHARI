@@ -120,6 +120,8 @@ class EngineContext:
         edition it compared against, which is the whole basis of the inflation
         defence — a cost is never compared to a rate from a different year.
         """
+        if not self.sor_years:
+            return None
         district = self.districts[work.district_id]
         basis = work.recommended_date or work.sanctioned_date or self.reference_date
         year = min(max(basis.year, min(self.sor_years)), max(self.sor_years))

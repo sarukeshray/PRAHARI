@@ -29,13 +29,3 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
-
-
-@app.get("/api/v1/health", tags=["system"])
-def health() -> dict:
-    return {
-        "status": "ok",
-        "engine_version": settings.engine_version,
-        "db_backend": settings.db_backend,
-        "data_notice": "Synthetic demonstration data — not live MPLADS records",
-    }

@@ -27,3 +27,7 @@ Thumbs.db
 # CAG source PDFs are large and not ours to redistribute.
 docs/references/
 backend/data/
+
+# Firebase service account - grants full admin access, never commit
+backend/app/config/firebase_credentials.json
+frontend/.env.local

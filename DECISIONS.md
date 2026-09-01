@@ -364,3 +364,63 @@ structurally, is capped at MEDIUM, and is context rather than an allegation.
 planted itself. They show the detectors are wired to the patterns they were built
 for and that a change has not silently broken one. They say nothing about
 real-world accuracy, and the backtest screen must not present them as if they do.
+
+---
+
+## D-017 — Demo sign-in fallback when Firebase is absent
+
+**Phase:** MVP 3
+
+Without Firebase configured the API accepts an `X-Demo-User` header naming a
+seeded account. This is **not authentication** — it trusts the client entirely.
+
+It exists so the project is demonstrable on a laptop with no Firebase project,
+which matters for a hackathon. It refuses to start when `ENV=production`, so it
+cannot reach a deployment by accident, and `/health` reports `"auth": "demo"` so
+which mode is live is never ambiguous.
+
+---
+
+## D-018 — A record outside scope returns 404, not 403
+
+**Phase:** MVP 3
+
+`GET /works/{id}` for a work the caller may not see returns **404**. A 403 would
+confirm the record exists, which is itself information the caller is not entitled
+to — an Implementing Agency could enumerate work IDs and learn which are real.
+
+403 is used only where the *action* is refused and the caller already legitimately
+sees the record: a Member trying to review a finding, an Agency reading another
+agency's performance.
+
+---
+
+## D-019 — Reviewed findings survive rescoring
+
+**Phase:** MVP 3
+
+`persist()` documented that a reviewer's decision is never discarded by a re-run.
+It was not true. Deleting the parent assessment with `db.delete(row)` cascaded
+through the ORM relationship and took the reviewed findings with it — so a
+CLEARED finding came back OPEN after rescoring.
+
+Now: OPEN findings are cleared with a bulk `delete()` statement that bypasses the
+cascade, and a superseded assessment is removed **only if no findings remain**
+against it. An assessment carrying a decided finding stays, because it is the
+record that decision was made against.
+
+Read paths take the newest assessment per stage, so a lingering superseded one
+never drives the headline tier.
+
+**Found by a test asserting the property, not by reading the code.** The comment
+claiming the behaviour had been sitting above the bug that broke it.
+
+---
+
+## D-020 — Missing Schedule of Rates degrades instead of crashing
+
+**Phase:** MVP 3
+
+`benchmark()` raised `ValueError` on an empty rates table, taking the whole
+assessment down. A missing benchmark is not evidence of anything about a work, so
+the cost module now returns no finding and the other modules run normally.
