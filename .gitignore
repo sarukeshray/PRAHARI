@@ -23,3 +23,7 @@ Thumbs.db
 
 # Model cache (sentence-transformers downloads at first use)
 .cache/
+
+# CAG source PDFs are large and not ours to redistribute.
+docs/references/
+backend/data/

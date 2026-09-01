@@ -1,0 +1,82 @@
+# Scoring weights and thresholds.
+#
+# This file is the documented default. On first run it seeds the `engine_config`
+# table, and from then on the database wins — so the Ministry role can retune
+# through the interface and the change takes effect on the next scoring run.
+# Reset to these defaults by truncating `engine_config`.
+
+engine_version: "1.0.0"
+
+# Weights within each stage sum to 1.0.
+stage1:
+  COST: 0.28
+  DUPLICATE: 0.22
+  COMPLIANCE: 0.25
+  AGENCY: 0.10
+  STATISTICAL: 0.15
+
+stage2:
+  DISBURSEMENT: 0.32
+  TIMELINE: 0.24
+  GEOTAG: 0.22
+  VARIANCE: 0.22
+
+stage3:
+  HANDOVER: 1.00
+
+# The agency signal is capped independently of its weight above, so retuning
+# through the Ministry screen can never turn a peer-relative record into a
+# dominant factor. See the fairness rationale in the build specification.
+caps:
+  AGENCY_MAX_CONTRIBUTION: 0.15
+
+tiers:
+  MEDIUM_MIN: 26
+  HIGH_MIN: 51
+  CRITICAL_MIN: 76
+
+thresholds:
+  # COST — ratios against the same-year Schedule of Rates benchmark
+  COST_ABOVE_SOR_PCT: 25.0
+  COST_BELOW_SOR_PCT: -30.0
+  COST_PEER_MODIFIED_Z: 3.5
+
+  # DUPLICATE
+  DUPLICATE_COSINE: 0.82
+  DUPLICATE_DISTANCE_M: 500
+  DUPLICATE_WINDOW_DAYS: 365
+  SPLIT_CLUSTER_EPS_M: 300
+  SPLIT_MIN_WORKS: 3
+  SPLIT_WINDOW_DAYS: 90
+  SPLIT_UNDER_THRESHOLD_PCT: 10.0
+
+  # AGENCY
+  AGENCY_PERCENTILE_FLOOR: 20
+  AGENCY_MIN_COMPLETED_WORKS: 15
+
+  # COMPLIANCE
+  SANCTION_DECISION_DAYS: 45
+  SC_AREA_MIN_PCT: 15.0
+  ST_AREA_MIN_PCT: 7.5
+
+  # STATISTICAL
+  ISOLATION_SCORE_FLAG_AT: 70
+  ISOLATION_CONTAMINATION: 0.10
+
+  # DISBURSEMENT
+  PAYMENT_AHEAD_POINTS: 25.0
+  FULLY_PAID_PROGRESS_PCT: 90.0
+
+  # GEOTAG
+  PHOTO_DISTANCE_M: 500
+
+  # VARIANCE
+  COST_OVERRUN_PCT: 15.0
+
+  # TIMELINE
+  COMPLETION_GUIDELINE_DAYS: 365
+  PROGRESS_STALE_DAYS: 120
+
+  # HANDOVER (Stage 3)
+  HANDOVER_OVERDUE_DAYS: 30
+  UC_SUBMISSION_DAYS: 30

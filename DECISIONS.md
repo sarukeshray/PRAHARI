@@ -160,3 +160,98 @@ Marker clustering was dropped. `CircleMarker` encodes severity by both radius an
 colour, which clustering into a single count bubble would have thrown away, and
 at this data volume clustering solved a problem the map does not have. This
 removes the only genuinely discretionary dependency flagged in D-002.
+
+---
+
+## D-009 — Inflation handled by same-year SoR ratio, not a deflator
+
+**Phase:** MVP 1
+**Spec reference:** rule 5 of the build-out prompt, which cites a section 4.6
+that does not exist in that document
+
+The rule was stated but never specified, so the design was chosen here and is
+recorded for challenge.
+
+A work is compared against the Schedule of Rates **for the year it was
+recommended**: `ratio = estimated_cost / sor_rate(work_type, terrain, year)`.
+No deflator, no external index.
+
+Why this over a CPWD/WPI deflator: a uniform price rise moves the cost and the
+benchmark by the same factor, so it cancels out of the ratio arithmetically
+rather than approximately. It also needs no external data, which means the
+defence cannot break because a series was not sourced.
+
+Verified on the seeded dataset. Median SoR climbs from ₹766,800 to ₹1,137,882
+across the four years — 48% nominal — while the median cost ratio holds flat:
+
+```
+year      n   median SoR   median ratio   p95 ratio
+2023    372      766,800          1.008       1.216
+2024   1204      842,803          0.995       1.181
+2025   1141      992,954          1.005       1.206
+2026    729    1,137,882          1.003       1.180
+```
+
+A `cost_index` table and a real-terms Trends chart are built as well, but the
+engine never reads them — they exist so the question can be answered visually in
+Q&A. The chart hides itself when no index is loaded rather than inventing one.
+
+---
+
+## D-010 — `sor_benchmarks` keyed on terrain
+
+**Phase:** MVP 1
+**Spec reference:** original spec §4
+
+The specified columns were `(state, work_type, unit, unit_rate, year,
+terrain_multiplier)`. One `terrain_multiplier` on a row keyed by
+`(state, work_type, year)` cannot express five different terrain factors, so the
+lookup would have been ambiguous.
+
+`terrain_category` is now part of the key. `terrain_multiplier` retains exactly
+one meaning: the factor already applied to reach this row's rate. 720 rows for
+3 states × 12 work types × 4 years × 5 terrains.
+
+---
+
+## D-011 — Three schema additions beyond both specs
+
+**Phase:** MVP 1
+
+| Table / column | Why |
+|---|---|
+| `users` | The seven-role access model needs somewhere to hold a role and its data scope. Every API filter derives from these columns rather than from anything the client sends. |
+| `module_contributions` | The score breakdown a reviewer saw at decision time must be reproducible after the weights are retuned. Recomputing it would show a different breakdown than the one the decision was made on. |
+| `engine_config` | The Ministry threshold screen needs somewhere to write. Seeded from `weights.yaml`, which stays as the documented default; the database wins once a row exists. |
+| `agency_responses` | An implementing agency's reply to a finding. Kept separate from `flag_reviews` so a response can never be mistaken for a decision — a response routes back to the District Authority, it does not clear anything. |
+| `works.recommended_date` nullable | Required to model CAG-04, a sanction recorded against no recommendation. |
+
+---
+
+## D-012 — Generator: minimum instances per anomaly, fixed reference date
+
+**Phase:** MVP 1
+
+**Floor of 30 instances per anomaly type.** The original spec asked for ~12%
+planted across 11 types, which at 4,000 works gives roughly 5 instances of some
+types once the split is uneven. Recall measured over 5 instances is noise, and
+§10 requires a recall assertion per type. The generator now guarantees a floor,
+which puts the realised share at 14.0% rather than 12% — the group-level
+anomalies (`ENTITLEMENT_BREACH`, `QUOTA_SHORTFALL`) mark whole cohorts and
+overshoot their target by construction.
+
+**Fixed `REFERENCE_DATE = 2026-08-31` instead of `datetime.now()`.** Every age,
+overdue window and isolation-forest recency feature is measured from it. With
+wall-clock time the scores drift daily and a sensitivity report run in March
+would not match one run in September.
+
+**15% of aged works are left awaiting a sanction decision.** Without this only
+178 of 4,000 works stayed `RECOMMENDED`, leaving Stage 1 almost nothing to
+screen. It is also the more realistic model — a pending sanction is ordinary in
+MPLADS, and it is what `SANCTION_DELAY_45D` exists to catch.
+
+**Three defects found by hand-inspection and fixed:** work IDs encoded a year
+that later mutated during anomaly planting; the disbursement clamp at 100%
+silently shrank planted payment gaps below their own flag threshold; and
+structural anomalies relocated works across districts, leaving a Kerala work ID
+inside a Rajasthan cluster.
