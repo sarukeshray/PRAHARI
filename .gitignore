@@ -31,3 +31,7 @@ backend/data/
 # Firebase service account - grants full admin access, never commit
 backend/app/config/firebase_credentials.json
 frontend/.env.local
+
+# Uploaded photographs and any supplied reference data stay local.
+backend/data/
+backend/sample.pdf

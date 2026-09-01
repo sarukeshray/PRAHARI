@@ -52,6 +52,13 @@ export function ReviewQueue() {
             : 'Loading district position…'
         }
         actions={
+          <>
+          <a
+            href={`/api/v1/reports/district/${districtId}.pdf`}
+            className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal"
+          >
+            Findings PDF
+          </a>
           <button
             type="button"
             disabled={!works.data?.length}
@@ -70,6 +77,7 @@ export function ReviewQueue() {
           >
             Export queue
           </button>
+          </>
         }
       />
 

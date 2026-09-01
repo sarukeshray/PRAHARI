@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useFlags, useNational, useUpdateWeights, useWeights } from '@/api/hooks'
 import { FundFlowSankey } from '@/components/FundFlowSankey'
 import { NationalMap } from '@/components/NationalMap'
-import { PendingButton } from '@/components/Placeholder'
 import { downloadCsv } from '@/lib/csv'
 import {
   EmptyState,
@@ -112,9 +111,13 @@ export function MinistryOverview() {
             >
               Export CSV
             </button>
-            <PendingButton title="Formatted PDF export arrives with the reporting build">
+            <a
+              href="/api/v1/reports/district/RJ-UDR.pdf"
+              className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal"
+              title="Open findings for a district, as a filed document"
+            >
               Audit-ready PDF
-            </PendingButton>
+            </a>
           </div>
         }
       >

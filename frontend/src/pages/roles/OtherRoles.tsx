@@ -20,7 +20,7 @@ import {
 
 import {
   useAcknowledgeHandover,
-  useAgencyPerformance,
+  useReassignFlag,
   useFlags,
   useLogCheckin,
   useMaintenanceList,
@@ -28,7 +28,6 @@ import {
   usePublicAggregates,
   useRaiseMaintenance,
   useStateDistricts,
-  useWorks,
 } from '@/api/hooks'
 import {
   EmptyState,
@@ -41,10 +40,9 @@ import {
   Td,
   Th,
 } from '@/components/ui-kit'
-import { PendingButton, PendingTag, PlaceholderPanel } from '@/components/Placeholder'
+import { PendingTag } from '@/components/Placeholder'
 import { SyntheticDataBadge } from '@/components/SyntheticDataBadge'
 import { CitizenForm } from '@/pages/CitizenForm'
-import { downloadCsv } from '@/lib/csv'
 import { rupeesShort, shortDate } from '@/lib/format'
 import { MODULE_LABEL, flagTitle } from '@/lib/labels'
 import { useSession } from '@/lib/session'
@@ -227,17 +225,7 @@ export function StateEscalations() {
               </div>
               <div className="mt-1 text-[12.5px] font-medium">{flagTitle(f.flag_code)}</div>
               <p className="mt-0.5 text-[12px] leading-snug text-ink-muted">{f.explanation}</p>
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <PendingButton title="Reassignment arrives with the escalation build">
-                  Reassign reviewer
-                </PendingButton>
-                <PendingButton title="Escalation arrives with the escalation build">
-                  Escalate to Ministry
-                </PendingButton>
-                <span className="text-[11px] text-ink-faint">
-                  Neither changes the finding's state — they move whose queue it sits in.
-                </span>
-              </div>
+              <ReassignControl flagId={f.flag_id} assignedTo={f.assigned_to_user_id} />
             </li>
           ))}
         </ul>
@@ -246,230 +234,108 @@ export function StateEscalations() {
   )
 }
 
-/* ========================================================================== */
-/* Implementing Agency                                                         */
-/* ========================================================================== */
+/**
+ * Move a finding to a named District Authority reviewer.
+ *
+ * Reassignment does not change the finding's state — it changes whose queue it
+ * sits in. That distinction matters: a State officer can direct attention, but
+ * only the reviewer holding the finding can decide it.
+ */
+function ReassignControl({
+  flagId,
+  assignedTo,
+}: {
+  flagId: number
+  assignedTo: string | null
+}) {
+  const reassign = useReassignFlag()
+  const [open, setOpen] = useState(false)
+  const [target, setTarget] = useState('u-da-udaipur')
+  const [note, setNote] = useState('')
 
-export function AgencyWorks() {
-  const works = useWorks({ limit: 200 })
+  if (assignedTo && !open) {
+    return (
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-muted">
+        <span className="rounded-[2px] bg-seal-tint px-1.5 py-px font-mono text-[10.5px] text-seal">
+          assigned to {assignedTo}
+        </span>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-seal hover:underline"
+        >
+          Reassign again
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div>
-      <PageHeader
-        eyebrow="Assigned to this agency"
-        title="My works"
-        meta="Works this agency is executing, with anything raised against them."
-        actions={
+    <div className="mt-2.5">
+      {open ? (
+        <div className="rounded-[3px] border border-rule bg-[#fafbfb] p-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="block">
+              <span className="text-[11px] text-ink-muted">Reviewer</span>
+              <select
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                className="mt-1 rounded-[2px] border border-rule-strong bg-surface px-2 py-1 text-[12px]"
+              >
+                <option value="u-da-udaipur">S. Nair, IAS — Udaipur</option>
+                <option value="u-da-udaipur-2">R. Deshmukh — Udaipur</option>
+              </select>
+            </label>
+            <label className="block flex-1">
+              <span className="text-[11px] text-ink-muted">Reason</span>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Optional note for the audit trail"
+                className="mt-1 w-full rounded-[2px] border border-rule-strong bg-surface px-2 py-1 text-[12px]"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-[2px] border border-rule-strong px-3 py-1 text-[12px]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={reassign.isPending}
+              onClick={() =>
+                reassign.mutate(
+                  { flagId, assigned_to_user_id: target, note },
+                  { onSuccess: () => setOpen(false) },
+                )
+              }
+              className="rounded-[2px] bg-seal px-3 py-1 text-[12px] font-medium text-white disabled:opacity-40"
+            >
+              {reassign.isPending ? 'Reassigning…' : 'Reassign'}
+            </button>
+          </div>
+          {reassign.isError && (
+            <p className="mt-2 text-[11.5px] text-[#ae1414]">
+              {(reassign.error as Error).message}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled={!works.data?.length}
-            onClick={() =>
-              downloadCsv(
-                `my-works-${new Date().toISOString().slice(0, 10)}.csv`,
-                (works.data ?? []) as unknown as Record<string, unknown>[],
-                [
-                  'work_id', 'work_type', 'block', 'estimated_cost', 'status',
-                  'severity_tier', 'open_flag_count', 'primary_finding',
-                ],
-              )
-            }
-            className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal disabled:opacity-40"
+            onClick={() => setOpen(true)}
+            className="rounded-[2px] border border-rule-strong px-3 py-1 text-[12px] hover:border-seal hover:text-seal"
           >
-            Export CSV
+            Reassign reviewer
           </button>
-        }
-      />
-
-      <div className="grid gap-4 border-b border-rule bg-paper px-5 py-5 lg:grid-cols-2">
-        <PlaceholderPanel
-          title="Submit a progress report"
-          body="File physical progress against a work, which is one half of the comparison the disbursement module makes. Reports are currently seeded with the dataset rather than entered here."
-          waitingOn="POST /works/{id}/progress"
-        >
-          <PendingButton title="Progress submission arrives with the agency write build">
-            File a report
-          </PendingButton>
-        </PlaceholderPanel>
-
-        <PlaceholderPanel
-          title="Upload a completion photograph"
-          body="The file goes to Firebase Storage and the backend then re-reads it to extract GPS and capture time. The metadata is never taken from the browser: the party uploading the photograph is the party the geotag check exists to verify."
-          waitingOn="Firebase Storage — see docs/FIREBASE_SETUP.md"
-        >
-          <PendingButton title="Photo upload needs a configured Firebase project">
-            Choose a photograph
-          </PendingButton>
-        </PlaceholderPanel>
-      </div>
-      {works.isPending && <Loading rows={8} label="Loading works" />}
-      {works.data?.length === 0 && (
-        <EmptyState title="No works assigned" body="Works assigned to this agency will appear here." />
-      )}
-      {works.data && works.data.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-[12.5px]">
-            <thead>
-              <tr className="border-b border-rule bg-[#fafbfb]">
-                <Th className="w-[150px]">Work ID</Th>
-                <Th className="w-[140px]">Type</Th>
-                <Th className="w-[110px] text-right">Estimate</Th>
-                <Th className="w-[110px]">Status</Th>
-                <Th className="w-[96px]">Severity</Th>
-                <Th>Finding</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {works.data.map((w) => (
-                <tr key={w.work_id} className="border-b border-rule">
-                  <Td className="font-mono text-[12px]">{w.work_id}</Td>
-                  <Td className="font-mono text-[11.5px]">{w.work_type}</Td>
-                  <Td className="text-right font-mono tabular-nums">
-                    {rupeesShort(w.estimated_cost)}
-                  </Td>
-                  <Td className="text-ink-muted">{w.status.replace('_', ' ').toLowerCase()}</Td>
-                  <Td>
-                    <SeverityChip severity={w.severity_tier} size="sm" />
-                  </Td>
-                  <Td>
-                    {w.primary_finding ? (
-                      <span className="line-clamp-2 text-[11.5px] leading-snug">
-                        {w.primary_finding}
-                      </span>
-                    ) : (
-                      <span className="text-[11.5px] text-ink-faint">Nothing raised</span>
-                    )}
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <span className="text-[11px] text-ink-faint">
+            Reassigning moves whose queue this sits in. It does not change the finding.
+          </span>
         </div>
       )}
-    </div>
-  )
-}
-
-export function AgencyFindings() {
-  const flags = useFlags({ status: 'OPEN' })
-  return (
-    <div>
-      <PageHeader
-        eyebrow="On my works"
-        title="Findings"
-        meta="What has been raised against works this agency is executing, and the numbers behind each one. Responding attaches evidence for the District Authority to weigh — it does not clear the finding."
-      />
-      {flags.isPending && <Loading rows={5} label="Loading findings" />}
-      {flags.data?.length === 0 && (
-        <EmptyState
-          title="Nothing has been raised"
-          body="No open findings sit against works assigned to this agency."
-        />
-      )}
-      {flags.data && flags.data.length > 0 && (
-        <ul className="divide-y divide-rule">
-          {flags.data.map((f) => (
-            <li key={f.flag_id} className="bg-surface px-5 py-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[12px] font-medium">{f.work_id}</span>
-                  <SeverityChip severity={f.severity_tier} size="sm" />
-                </div>
-                <span className="font-mono text-[11px] text-ink-faint">
-                  {MODULE_LABEL[f.module]}
-                </span>
-              </div>
-              <div className="mt-1 text-[13px] font-medium">{flagTitle(f.flag_code)}</div>
-              <p className="mt-1 border-l-2 border-rule-strong pl-3 text-[12.5px] leading-relaxed">
-                {f.explanation}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <PendingButton title="Agency responses arrive with the evidence build">
-                  Respond with evidence
-                </PendingButton>
-                <span className="text-[11px] text-ink-faint">
-                  A response attaches evidence for the District Authority to weigh. It never clears
-                  the finding.
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-export function AgencyPerformanceScreen() {
-  const { me } = useSession()
-  const perf = useAgencyPerformance(me?.scope_agency_id)
-
-  if (perf.isPending) return <Loading rows={6} label="Loading performance" />
-  if (perf.isError) return <ErrorState message={(perf.error as Error).message} onRetry={() => perf.refetch()} />
-  if (!perf.data) return null
-
-  const p = perf.data
-  const sorted = [...p.peer_percentiles].sort((a, b) => a - b)
-  const q = (f: number) => sorted[Math.min(sorted.length - 1, Math.floor(f * sorted.length))] ?? 0
-
-  return (
-    <div>
-      <PageHeader
-        eyebrow={p.name}
-        title="My performance"
-        meta="How this agency is being measured, shown in full. A percentile without its comparison group is not interpretable, so the peer set is named."
-      />
-
-      <div className="grid grid-cols-2 gap-px border-b border-rule bg-rule lg:grid-cols-4">
-        <Stat
-          label="Percentile in peer group"
-          value={`${p.percentile.toFixed(0)}`}
-          hint={`Among ${p.peer_count} agencies in ${p.peer_group_label}`}
-          accent={p.flagged ? AMBER : undefined}
-        />
-        <Stat label="Completed works" value={String(p.completed_works)} hint={`of ${p.total_works} assigned`} />
-        <Stat label="Completion rate" value={`${p.completion_rate.toFixed(0)}%`} />
-        <Stat label="Mean cost variance" value={`${p.mean_overrun_pct >= 0 ? '+' : ''}${p.mean_overrun_pct.toFixed(1)}%`} />
-      </div>
-
-      <Section
-        title="Against the peer group"
-        note={p.note}
-      >
-        {/* A box plot, hand-drawn: the peer distribution with this agency marked. */}
-        <div className="max-w-2xl">
-          <div className="relative h-16">
-            <div className="absolute top-1/2 right-0 left-0 h-px -translate-y-1/2 bg-rule" />
-            <div
-              className="absolute top-1/2 h-8 -translate-y-1/2 rounded-[2px] border border-rule-strong bg-[#f4f5f6]"
-              style={{ left: `${q(0.25)}%`, width: `${Math.max(2, q(0.75) - q(0.25))}%` }}
-              title={`Interquartile range: ${q(0.25).toFixed(0)}th to ${q(0.75).toFixed(0)}th percentile`}
-            />
-            <div
-              className="absolute top-1/2 h-8 w-px -translate-y-1/2 bg-ink"
-              style={{ left: `${q(0.5)}%` }}
-              title="Median"
-            />
-            <div
-              className="absolute top-1/2 h-10 w-[3px] -translate-y-1/2 rounded-[1px]"
-              style={{
-                left: `${p.percentile}%`,
-                backgroundColor: p.flagged ? AMBER : SEAL,
-              }}
-              title={`This agency: ${p.percentile.toFixed(0)}th percentile`}
-            />
-          </div>
-          <div className="flex justify-between font-mono text-[10px] text-ink-faint">
-            <span>weakest</span>
-            <span>median</span>
-            <span>strongest</span>
-          </div>
-          <p className="mt-4 text-[12px] leading-relaxed text-ink-muted">
-            The bar marks this agency; the box is the middle half of the peer group. Ranking is
-            within {p.peer_group_label.toLowerCase()} only — an agency working in harder terrain is
-            never measured against one working on the plains, because the terrain would become a
-            permanent penalty it could not escape by performing well.
-          </p>
-        </div>
-      </Section>
     </div>
   )
 }

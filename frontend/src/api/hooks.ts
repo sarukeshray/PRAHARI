@@ -94,6 +94,22 @@ export function useReviewFlag() {
   })
 }
 
+/** Move a finding to a different reviewer. Does not change its state. */
+export function useReassignFlag() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { flagId: number; assigned_to_user_id: string; note: string }) =>
+      api.post<Flag>(`/flags/${vars.flagId}/reassign`, {
+        assigned_to_user_id: vars.assigned_to_user_id,
+        note: vars.note,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['flags'] })
+      qc.invalidateQueries({ queryKey: ['work'] })
+    },
+  })
+}
+
 export function useAssessWork() {
   const qc = useQueryClient()
   return useMutation({

@@ -574,3 +574,104 @@ Other decisions worth recording:
   account. Listing them together would blur a distinction the product depends on.
 - **This endpoint is unauthenticated and would need rate limiting in any real
   deployment.** Length caps bound a single request; they do not bound a flood.
+
+---
+
+## D-026 — Photograph metadata is read on the server, never taken from the client
+
+**Phase:** MVP 5
+
+`POST /agency/works/{id}/photos` accepts the file itself and extracts GPS and
+capture time from its EXIF with Pillow, on the server.
+
+This is not a detail. The party uploading a photograph is exactly the party the
+geotag check exists to verify. Accepting their browser's account of where the
+photograph was taken would leave a control that catches only someone who forgot
+to lie. The obvious implementation — extract EXIF client-side, post the values as
+JSON — is faster, simpler, and worthless.
+
+Files land on the local disk. `_store_file` is the single function to change if
+uploads move to Firebase Storage; nothing else in the path knows where the bytes
+went, which is why the feature did not have to wait for a Firebase project.
+
+Verified end to end: a JPEG carrying GPS 60 km from a work site was uploaded,
+the server read the coordinates out of the file, and re-screening raised
+`PHOTO_LOCATION_MISMATCH` quoting the distance.
+
+---
+
+## D-027 — An agency response never clears a finding
+
+**Phase:** MVP 5
+
+`POST /agency/flags/{id}/respond` records the agency's account and leaves
+`RiskFlag.status` untouched. Letting the party a finding is about resolve it
+would empty the review workflow of meaning, so the response routes back to the
+District Authority as evidence for a person to weigh.
+
+The interface says so where an agency will read it, not only in the code.
+
+---
+
+## D-028 — The backtest computes, rather than displaying pasted figures
+
+**Phase:** MVP 5
+
+The backtest screen previously showed numbers I had copied from a CLI run. They
+were accurate for that run and would have silently gone stale on the next change
+to a threshold.
+
+`POST /backtest/run` now builds all five CAG cases in a **scratch in-memory
+database**, scores them with the live engine, and returns what fired. Sensitivity
+is computed from the working corpus on request. Neither can drift from the engine
+that produced it.
+
+**Two fixture defects the first run exposed**, both of which would have looked
+like findings about the method rather than about my fixture:
+
+- Every case work shared one description, one coordinate and one Member, so each
+  case also triggered `DUPLICATE_CANDIDATE`, `SPLIT_WORK_PATTERN` and
+  `ENTITLEMENT_EXCEEDED`. A juror seeing duplicate detection fire on an
+  inadmissible-works case would rightly ask why.
+- Positions used `index % 20`, so works in different cases landed on the same
+  point under the same agency — a genuine cluster, correctly flagged, entirely an
+  artefact of how I had built the fixture.
+
+Both fixed. What remains in the "also fired" column is real: a work paid in full
+and never built *is* also overdue on handover, and showing that is worth more
+than hiding it.
+
+---
+
+## D-029 — Reference data loads if supplied, and is never required
+
+**Phase:** MVP 5
+
+`python -m app.seed.load_reference_data` replaces synthetic Schedule of Rates
+figures with published ones where a state CSV exists, and loads a cost index if
+one is present.
+
+Both inputs are optional and independent. A missing file is reported and skipped,
+never an error. The project has to run on a clean checkout with no downloads;
+supplying real rates changes only what a cost finding can *cite* — "the Rajasthan
+Schedule of Rates, 2025" instead of "a synthetic benchmark" — not whether the
+engine works.
+
+---
+
+## D-030 — The training notebook is generated from a script
+
+**Phase:** MVP 5
+
+`notebooks/prahari_model_training.ipynb` is built by `backend/build_notebook.py`
+rather than hand-edited.
+
+A raw `.ipynb` is a wall of JSON with escaped newlines: unreadable in a diff and
+impossible to comment on in review. Keeping the source as Python means the
+notebook's content is reviewable like any other code.
+
+The notebook runs standalone on a fresh Colab runtime — it generates its own data
+and clones nothing. It checks the inflation defence against its own corpus, plots
+the similarity distribution for known duplicate pairs against unrelated ones to
+justify the 0.82 threshold from evidence rather than taste, fits the Isolation
+Forest, and reports recall using the same rules the dashboard uses.

@@ -11,7 +11,6 @@ import {
   SEVERITY_HEX,
   ThresholdBar,
 } from '@/components/ui-kit'
-import { PendingButton } from '@/components/Placeholder'
 import { rupees, shortDate } from '@/lib/format'
 import { MODULE_LABEL, STAGE_LABEL, STAGE_NOTE, flagTitle, signalLabel } from '@/lib/labels'
 import { cn } from '@/lib/utils'
@@ -261,9 +260,6 @@ function FlagCard({ flag }: { flag: Flag }) {
                     : 'Clear'}
               </button>
             ))}
-            <PendingButton title="Reassignment arrives with the escalation build">
-              Reassign
-            </PendingButton>
           </div>
 
           {pending && (

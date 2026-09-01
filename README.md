@@ -74,29 +74,30 @@ real-world accuracy, and the backtest screen says so in the words a juror reads.
 | Composite scoring, tiering, compliance override | Built |
 | Templated explanations, 26 flag codes | Built |
 | Synthetic generator, 4,000 works, 12 planted patterns | Built, deterministic under `--seed` |
-| API — 25 endpoints | Built |
+| API — 36 endpoints | Built |
 | Seven-role access model | Built, 43 boundary tests |
 | Review workflow + audit trail | Built |
 | All seven dashboards | Built, reading live endpoints |
 | CSV export, fund-flow Sankey, national map, charts | Built |
+| Photo upload with server-side EXIF | Built |
+| Progress reports, agency responses, flag reassignment | Built |
+| Citizen submissions with an official reply | Built |
+| CAG backtest, computed live | Built |
+| Audit-ready PDF export | Built |
+| Colab training notebook | Built |
+| Schedule of Rates / cost-index loader | Built |
 
-### Scaffolding — designed, labelled, not wired
+### Still open
 
-Each renders with a dashed border and a tag naming what it waits on.
-**A placeholder never displays an invented number** — only the shape of a screen.
-
-- Photo upload with server-side EXIF extraction *(needs Firebase)*
-- Progress-report submission, agency responses to findings
-- Flag reassignment UI *(the endpoint exists; only the button is a stub)*
-- Escalation to Ministry, formatted PDF export
-- Colab training notebook
-
-### Not started
-
-- `GET /backtest/cases`, `POST /backtest/run` — the backtest screen currently
-  shows figures pasted from a CLI run rather than computing them live
-- Schedule of Rates CSV loader (the generator synthesises rates)
-- Cost-index loader and the real-terms Trends chart
+- **Firebase** — auth runs in demo mode until a project is configured
+  (`docs/FIREBASE_SETUP.md`, about 25 minutes). Photo upload works without it:
+  files go to the local disk and EXIF is read server-side.
+- **Escalation to Ministry** — reassignment between reviewers works; a formal
+  escalation path does not exist yet
+- **The real-terms Trends chart** hides itself until a cost-index CSV is loaded,
+  rather than inventing a series
+- **Rate limiting** on the public submission endpoint, which any real deployment
+  would need
 
 ## Running it
 
@@ -138,6 +139,8 @@ Start here, in this order:
 | `backend/app/api/deps.py` | `Scope` — the seven-role access model, in one class |
 | `backend/tests/test_access_boundaries.py` | What the system refuses to show, proved by real HTTP requests |
 | `frontend/src/components/ui-kit.tsx` | `ThresholdBar` — the evidence row every finding renders through |
+| `backend/app/api/v1/agency.py` | Where the geotag control actually lives: EXIF read server-side, never from the client |
+| `backend/app/backtest/cag_cases.py` | The five CAG cases, built and scored in an isolated database |
 
 Every non-obvious decision is recorded in `DECISIONS.md` with the reason and,
 where it was found by measurement, the number that prompted it.
@@ -162,12 +165,15 @@ backend/app/
   api/v1/          works · dashboards · lifecycle · system
   api/deps.py      authentication and the seven-role Scope
   models/          20 tables
-  seed/            synthetic generator + catalogues
+  backtest/        CAG case reconstruction + sensitivity, both computed live
+  seed/            synthetic generator, catalogues, reference-data loader
   config/          weights.yaml — defaults; the database wins once seeded
 frontend/src/
   pages/           one directory per role
   components/      ui-kit.tsx carries every shared primitive
   api/             client · hooks · types
+notebooks/
+  prahari_model_training.ipynb   standalone Colab notebook; runs with no checkout
 docs/
   FIREBASE_SETUP.md   browser steps, assumes no prior Firebase experience
   EXTERNAL_SETUP.md   everything else outside the editor
