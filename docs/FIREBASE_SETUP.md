@@ -199,7 +199,7 @@ Use your real project ID in that bucket name.
 Restart both servers so they pick up the new environment files, then:
 
 ```powershell
-curl.exe http://127.0.0.1:8000/api/v1/health
+curl.exe http://127.0.0.1:8001/api/v1/health
 ```
 
 Look for `"auth": "firebase"` in the response. If it says `"auth": "demo"`, the

@@ -424,3 +424,40 @@ claiming the behaviour had been sitting above the bug that broke it.
 `benchmark()` raised `ValueError` on an empty rates table, taking the whole
 assessment down. A missing benchmark is not evidence of anything about a work, so
 the cost module now returns no finding and the other modules run normally.
+
+---
+
+## D-021 — Backend moved to port 8001
+
+**Phase:** MVP 4
+
+Port 8000 was left held by an orphaned socket — the owning process no longer
+exists but Windows kept the listener bound, and it did not release across
+several minutes.
+
+The backend now defaults to **8001**, and the Vite proxy target is overridable
+with `VITE_API_TARGET` so this is not baked in. Nothing user-facing changes: the
+app is still at `localhost:5173`.
+
+---
+
+## D-022 — Frontend reads the API; the prototype fixtures are gone
+
+**Phase:** MVP 4
+
+`src/data/works.ts` and `src/data/analytics.ts` — the compiled-in placeholder
+dataset — are deleted. Every number on every screen now comes from an endpoint.
+
+Two consequences worth stating:
+
+- **The client never decides its own role.** `/me` is the single source of truth
+  for identity, navigation and scope, so the interface cannot offer a section the
+  API would refuse. Route guards mirror the server; they do not replace it.
+- **Charts stayed single-hue.** D-006 and D-007 still hold now that the data is
+  real: the radar, the bubble chart and every bar use one hue, and identity is
+  carried by position and label rather than by a colour a reader has to separate.
+
+The backtest screen's sensitivity figures remain literals, regenerated from
+`python -m app.engine.cli recall` rather than computed live — they describe a
+specific scored corpus, and recomputing them per page load would invite them to
+drift from the run they document.

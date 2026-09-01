@@ -55,10 +55,10 @@ cd backend
 python -m venv .venv
 ./.venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
 alembic upgrade head
-./.venv/Scripts/uvicorn.exe app.main:app --reload --port 8000
+./.venv/Scripts/uvicorn.exe app.main:app --reload --port 8001
 ```
 
-API docs at http://127.0.0.1:8000/docs, health at `/api/v1/health`.
+API docs at http://127.0.0.1:8001/docs, health at `/api/v1/health`.
 
 **Frontend**
 

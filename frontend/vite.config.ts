@@ -13,7 +13,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       // Keeps the dashboard on a same-origin path during development.
-      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+      // Override with VITE_API_TARGET if the backend runs elsewhere.
+      '/api': {
+        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8001',
+        changeOrigin: true,
+      },
     },
   },
 })

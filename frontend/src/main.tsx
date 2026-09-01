@@ -13,16 +13,21 @@ import '@fontsource/ibm-plex-sans-devanagari/600.css'
 
 import App from './App.tsx'
 import './index.css'
+import { SessionProvider } from './lib/session.tsx'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
+  defaultOptions: {
+    queries: { refetchOnWindowFocus: false, retry: 1, staleTime: 30_000 },
+  },
 })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <SessionProvider>
+          <App />
+        </SessionProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

@@ -21,7 +21,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\alembic.exe upgrade head
 .\.venv\Scripts\python.exe -m app.seed.generate --works 4000 --seed 42 --reset
-.\.venv\Scripts\uvicorn.exe app.main:app --reload --port 8000
+.\.venv\Scripts\uvicorn.exe app.main:app --reload --port 8001
 ```
 
 ```powershell
