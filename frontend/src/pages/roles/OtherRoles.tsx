@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   CartesianGrid,
   ResponsiveContainer,
@@ -709,6 +710,8 @@ export function UserAgencyMaintenance() {
 
 export function PublicView() {
   const agg = usePublicAggregates()
+  const { isSignedIn, signOut } = useSession()
+  const navigate = useNavigate()
 
   const totals = (agg.data ?? []).reduce(
     (a, s) => ({
@@ -723,6 +726,47 @@ export function PublicView() {
   return (
     <div className="min-h-screen bg-paper">
       <SyntheticDataBadge />
+
+      {/* The public view has no left rail, so it carries its own way out. */}
+      <header className="flex flex-wrap items-center gap-3 border-b border-rule bg-surface px-4 py-2">
+        <Link to="/" className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-[2px] bg-seal">
+            <span className="font-deva text-[13px] leading-none font-semibold text-white">प्र</span>
+          </span>
+          <span className="text-[13px] font-semibold tracking-[0.1em]">PRAHARI</span>
+        </Link>
+        <span aria-hidden className="h-4 w-px bg-rule" />
+        <span className="text-[12px] text-ink-muted">Public</span>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Link
+            to="/"
+            className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[11.5px] text-ink-muted hover:border-seal hover:text-seal"
+          >
+            Home
+          </Link>
+          {isSignedIn ? (
+            <button
+              type="button"
+              onClick={() => {
+                signOut()
+                navigate('/', { replace: true })
+              }}
+              className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[11.5px] text-ink-muted hover:border-seal hover:text-seal"
+            >
+              Sign out
+            </button>
+          ) : (
+            <Link
+              to="/signin"
+              className="rounded-[2px] bg-seal px-3 py-1 text-[11.5px] font-medium text-white"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
+      </header>
+
       <PageHeader
         eyebrow="Public view · no sign-in required"
         title="MPLADS at a glance"
