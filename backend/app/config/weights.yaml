@@ -60,7 +60,10 @@ thresholds:
   ST_AREA_MIN_PCT: 7.5
 
   # STATISTICAL
-  ISOLATION_SCORE_FLAG_AT: 70
+  # 90, not the specified 70: the score is now a percentile (see D-014), so 70
+  # would flag the top 30% of every proposal batch. 90 matches the configured
+  # contamination of 0.10 - the model's own view of how much is anomalous.
+  ISOLATION_SCORE_FLAG_AT: 90
   ISOLATION_CONTAMINATION: 0.10
 
   # DISBURSEMENT

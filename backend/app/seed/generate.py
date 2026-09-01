@@ -282,19 +282,28 @@ def build_works(db: Session, rng: random.Random, ref: dict, count: int) -> list[
     for a in ref["agencies"]:
         agencies_by_district[a.district_id].append(a)
 
-    mps_by_state: dict[str, list[MP]] = defaultdict(list)
+    # Lok Sabha members recommend only within their own constituency; Rajya
+    # Sabha members may recommend anywhere in their state.
+    ls_by_constituency: dict[str, list[MP]] = defaultdict(list)
+    rs_by_state: dict[str, list[MP]] = defaultdict(list)
     for m in mps:
-        mps_by_state[m.state].append(m)
+        if m.house == House.LOK_SABHA:
+            ls_by_constituency[m.constituency].append(m)
+        else:
+            rs_by_state[m.state].append(m)
 
     work_types = list(cat.WORK_TYPES)
     works: list[Work] = []
+    mp_year_spend: dict[tuple, float] = defaultdict(float)
 
     for i in range(count):
         district = districts[i % len(districts)]
         block = rng.choice(cat.BLOCKS[district.district_id])
         panchayat = rng.choice(cat.BLOCKS[district.district_id])
         work_type = rng.choice(work_types)
-        mp = rng.choice(mps_by_state[district.state])
+        eligible = ls_by_constituency.get(district.name, []) + rs_by_state.get(district.state, [])
+        if not eligible:
+            eligible = mps
 
         # Spread recommendations across three financial years.
         recommended = REFERENCE_DATE - timedelta(days=rng.randint(20, 1080))
@@ -307,6 +316,20 @@ def build_works(db: Session, rng: random.Random, ref: dict, count: int) -> list[
         # tail sits above without being planted. sigma keeps ~95% inside ±25%,
         # so the ordinary population does not trip COST_ABOVE_SOR on its own.
         estimated = round(benchmark * rng.lognormvariate(0, 0.11), 2)
+
+        # Give the work to a member who still has room this year. Purely random
+        # assignment pushed some member-years past the entitlement by accident,
+        # producing 139 compliance findings nobody planted.
+        fy_key = financial_year_of(recommended)
+        headroom = [
+            m
+            for m in eligible
+            if mp_year_spend[(m.mp_id, fy_key)] + estimated <= m.annual_entitlement * 0.92
+        ]
+        mp = rng.choice(headroom) if headroom else min(
+            eligible, key=lambda m: mp_year_spend[(m.mp_id, fy_key)]
+        )
+        mp_year_spend[(mp.mp_id, fy_key)] += estimated
 
         lat, lon = jitter_point(rng, district.centroid_lat, district.centroid_lon, 35)
 
@@ -328,18 +351,39 @@ def build_works(db: Session, rng: random.Random, ref: dict, count: int) -> list[
         )
 
         # Advance the work along its lifecycle according to its age.
-        age = (REFERENCE_DATE - recommended).days
+        # The proposing note normally names an implementing agency, so the
+        # agency record is available to pre-sanction screening.
+        work.agency_id = rng.choice(agencies_by_district[district.district_id]).agency_id
+
         awaiting_decision = rng.random() < 0.15
+        if awaiting_decision:
+            # A pending proposal is usually a recent one. Leaving them spread
+            # across three years made 88% of the pending queue overdue against
+            # the 45-day guideline, which is not what a functioning district
+            # looks like. A quarter are still genuinely stale, which is what
+            # SANCTION_DELAY_45D exists to surface.
+            stale = rng.random() < 0.25
+            span = rng.randint(200, 900) if stale else rng.randint(3, 40)
+            recommended = REFERENCE_DATE - timedelta(days=span)
+            work.recommended_date = recommended
+            if stale:
+                # Overdue for a decision - exactly what SANCTION_DELAY_45D
+                # looks for, so it belongs in the answer key rather than
+                # sitting unlabelled in the clean population.
+                work.planted_anomaly = PlantedAnomaly.TIMELINE_BREACH
+
+        age = (REFERENCE_DATE - recommended).days
         if age > 60 and not awaiting_decision:
             work.sanctioned_date = recommended + timedelta(days=rng.randint(12, 44))
-            work.agency_id = rng.choice(agencies_by_district[district.district_id]).agency_id
             work.expected_completion_date = work.sanctioned_date + timedelta(days=365)
             work.status = WorkStatus.SANCTIONED
             # Only a sanctioned work can progress. One left awaiting a decision
             # stays RECOMMENDED however old it is, which is the point.
             if age > 150:
                 work.status = WorkStatus.IN_PROGRESS
-            if age > 420 and rng.random() < 0.78:
+            # Works with no planted anomaly should finish inside the guideline;
+            # a stale clean work is a finding the answer key does not know about.
+            if age > 400:
                 work.status = WorkStatus.COMPLETED
                 work.actual_completion_date = work.sanctioned_date + timedelta(
                     days=rng.randint(200, 350)
@@ -371,7 +415,10 @@ def build_downstream(db: Session, rng: random.Random, works: list[Work], ref: di
 
         # Progress reports roughly quarterly since sanction.
         span = (REFERENCE_DATE - w.sanctioned_date).days
-        n_reports = max(1, min(8, span // 90))
+        # Reporting runs quarterly up to the present for a work still underway.
+        # Capping the count left the newest report months old on long-running
+        # works, so PROGRESS_REPORTING_STALLED fired across the clean population.
+        n_reports = max(1, span // 90)
         for r in range(n_reports):
             pct = round(progress * (r + 1) / n_reports, 1)
             db.add(
@@ -523,8 +570,9 @@ def plant_per_work(db: Session, rng: random.Random, works: list[Work], targets: 
         return None
 
     # COST_INFLATION - estimate far above the same-year benchmark.
+    # Screened by Stage 1, so it must land on a work still awaiting sanction.
     for _ in range(targets[PlantedAnomaly.COST_INFLATION]):
-        w = take()
+        w = take(lambda w: w.status == WorkStatus.RECOMMENDED)
         if not w:
             break
         district = by_district[w.district_id]
@@ -666,7 +714,11 @@ def plant_structural(
         original = take(lambda w: w.recommended_date is not None)
         if not original:
             break
-        copy = take(lambda w: w.recommended_date is not None, district=original.district_id)
+        # The copy is the work a screener should catch, so it must be the one
+        # still awaiting sanction.
+        copy = take(
+            lambda w: w.status == WorkStatus.RECOMMENDED, district=original.district_id
+        )
         if not copy:
             break
         copy.work_type = original.work_type
@@ -687,7 +739,7 @@ def plant_structural(
     # SALAMI_SLICING - one job split into several just-under-threshold works.
     clusters = max(1, targets[PlantedAnomaly.SALAMI_SLICING] // 4)
     for _ in range(clusters):
-        anchor = take(lambda w: w.recommended_date is not None)
+        anchor = take(lambda w: w.status == WorkStatus.RECOMMENDED)
         if not anchor:
             break
         district = by_district[anchor.district_id]
@@ -695,7 +747,7 @@ def plant_structural(
         threshold = rng.choice(cat.SANCTION_THRESHOLDS)
         members = [anchor]
         for _ in range(rng.randint(3, 6) - 1):
-            m = take(lambda w: w.recommended_date is not None, district=anchor.district_id)
+            m = take(lambda w: w.status == WorkStatus.RECOMMENDED, district=anchor.district_id)
             if m:
                 members.append(m)
         for idx, m in enumerate(members):
@@ -733,6 +785,9 @@ def plant_structural(
             continue
         borrower_photos[0].image_hash = donor_photos[0].image_hash
         borrower.planted_anomaly = PlantedAnomaly.PHOTO_REUSE
+        # Once the hash is shared, nothing in the record says which work is the
+        # original, so the engine flags both - correctly. Both belong in the key.
+        donor.planted_anomaly = PlantedAnomaly.PHOTO_REUSE
 
     # ENTITLEMENT_BREACH - a member's financial year pushed past the annual cap.
     breached = 0

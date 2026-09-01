@@ -255,3 +255,112 @@ that later mutated during anomaly planting; the disbursement clamp at 100%
 silently shrank planted payment gaps below their own flag threshold; and
 structural anomalies relocated works across districts, leaving a Kerala work ID
 inside a Rajasthan cluster.
+
+---
+
+## D-013 — Group-level findings attach to their cause, not to every member
+
+**Phase:** MVP 2
+
+`ENTITLEMENT_EXCEEDED` and `QUOTA_SHORTFALL` are facts about a *group* — a
+member's financial year, a district's financial year — but `risk_flags` requires
+a `work_id`.
+
+Raising them against every work in the group produced **1,307 findings for 17
+actual breaches**, burying the signal the flag exists to surface. They are now
+attached to the works that caused them:
+
+- **Entitlement**: works are walked in recommendation order and the flag is
+  raised only on those recommended after the running total crossed the cap.
+  Those are the recommendations that should not have been made.
+- **Quota**: raised once per deficient district-year, carried by the most recent
+  non-SC/ST work — the last decision that could have gone the other way. The
+  sentence states plainly that it is a district-level finding.
+
+Recall for these two is therefore measured **per group**, not per work; per-work
+recall would measure the labelling convention rather than the detection. Both
+report 100%, but over only 2 and 1 groups respectively — thin evidence, and it
+should be described that way.
+
+---
+
+## D-014 — Isolation Forest normalised by rank, threshold moved 70 → 90
+
+**Phase:** MVP 2
+**Spec reference:** original spec §6.5
+
+The spec called for min-max over `decision_function`. That distribution is
+tightly clustered, so scaled linearly it put 4,000 works into a narrow band:
+**6 crossed the flag line**, and a published score of "78" corresponded to
+nothing a reader could name.
+
+The score is now the rank of a work against the training distribution, so "78"
+means *more unusual than 78% of comparable proposals* — which is exactly what the
+explanation template already claimed it meant.
+
+The threshold moves with it. On a percentile scale, 70 flags the top 30% of every
+batch; 90 matches the configured contamination of 0.10, which is the model's own
+estimate of how much of the population is anomalous.
+
+**Two related fixes, both found by measuring rather than by reading code:**
+
+- The model is fitted on the population Stage 1 actually screens — works awaiting
+  sanction — not the whole corpus. Training on everything made proposals look
+  unusual simply for being unscreened.
+- `days_recommendation_to_now` was **dropped** from the feature vector. Only
+  recent works await sanction, so the model learned that recency is strange and
+  flagged 39% of proposals. A work is not suspicious for being new. Timeliness is
+  a compliance rule with a stated threshold, which is where it belongs.
+
+---
+
+## D-015 — `SANCTION_DELAY_45D` covers decisions taken late, not only outstanding ones
+
+**Phase:** MVP 2
+
+The rule originally fired only when `sanctioned_date IS NULL`. A work sanctioned
+190 days after its recommendation passed in silence — the opposite of what the
+guideline is for. It now measures recommendation-to-decision where a decision
+exists, and recommendation-to-today where one does not, with a different sentence
+for each because they call for different action.
+
+Found by recall measurement: `TIMELINE_BREACH` sat at 62.5% and the missing half
+were all works sanctioned late.
+
+---
+
+## D-016 — Making "clean" mean "crosses nothing"
+
+**Phase:** MVP 2
+
+The first full run reported a **27.7% false-positive rate**. Inspection showed
+most of it was not engine error:
+
+| Source | Count | What it actually was |
+|---|---|---|
+| `ENTITLEMENT_EXCEEDED` | 139 | Member-years that genuinely breached, created by random assignment |
+| `SANCTION_DELAY_45D` | 145 | Pending proposals genuinely older than 45 days |
+| `COMPLETION_OVERDUE_12M` | 135 | Works genuinely past the guideline |
+| `PHOTO_REUSED_ACROSS_WORKS` | 40 | The *donor* of each planted pair — indistinguishable from the borrower |
+| `AGENCY_HISTORICAL_CONCERN` | 127 | The bottom fifth of every peer group, by definition |
+
+The wrong response would have been raising thresholds until the number looked
+better, which would have cost real recall to flatter a metric. Instead the
+generator was corrected so a work with no planted anomaly does not cross a real
+threshold:
+
+- Members are assigned greedily, never past 92% of the annual entitlement
+- A genuinely stale pending proposal is *labelled* `TIMELINE_BREACH`, because
+  that is what it is
+- Unplanted works complete inside the twelve-month guideline
+- Both works in a reused-photograph pair are labelled, since nothing in the
+  record says which is the original
+
+**Result: 27.7% → 5.7%**, with recall unchanged at 100% across all twelve
+patterns. The residue is almost entirely the agency signal, which fires
+structurally, is capped at MEDIUM, and is context rather than an allegation.
+
+**On the 100% figures.** These measure the engine against anomalies this project
+planted itself. They show the detectors are wired to the patterns they were built
+for and that a change has not silently broken one. They say nothing about
+real-world accuracy, and the backtest screen must not present them as if they do.

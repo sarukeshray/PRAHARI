@@ -47,20 +47,24 @@ BLOCKS: dict[str, list[str]] = {
 # Works and rates
 # --------------------------------------------------------------------------
 
-# work_type -> (unit, base plain-terrain rate in rupees for a typical work, typical quantity)
+# work_type -> (unit, base plain-terrain rate in rupees for a typical work, plain-language name)
+#
+# Sized to actual MPLADS works, which are small: a typical sanction is a few
+# lakh, not a few crore. Getting this wrong made 40 members breach the annual
+# 5 crore entitlement by accident, drowning the finding meant to surface it.
 WORK_TYPES: dict[str, tuple[str, float, str]] = {
-    "ROAD_CC": ("per km", 4_200_000, "cement concrete road"),
-    "ROAD_BT": ("per km", 3_100_000, "bituminous road"),
-    "COMMUNITY_HALL": ("per unit", 1_850_000, "community hall"),
-    "SCHOOL_BUILDING": ("per room", 950_000, "school building"),
-    "WATER_TANK": ("per unit", 1_150_000, "water storage tank"),
-    "BOREWELL": ("per unit", 480_000, "borewell"),
-    "STREET_LIGHTING": ("per 10 poles", 320_000, "street lighting"),
-    "DRAINAGE": ("per 100 m", 410_000, "drainage line"),
-    "TOILET_BLOCK": ("per unit", 620_000, "toilet block"),
-    "LIBRARY": ("per unit", 1_400_000, "library building"),
-    "BUS_SHELTER": ("per unit", 280_000, "bus shelter"),
-    "CREMATORIUM_SHED": ("per unit", 540_000, "crematorium shed"),
+    "ROAD_CC": ("per km", 1_890_000, "cement concrete road"),
+    "ROAD_BT": ("per km", 1_395_000, "bituminous road"),
+    "COMMUNITY_HALL": ("per unit", 832_500, "community hall"),
+    "SCHOOL_BUILDING": ("per room", 427_500, "school building"),
+    "WATER_TANK": ("per unit", 517_500, "water storage tank"),
+    "BOREWELL": ("per unit", 216_000, "borewell"),
+    "STREET_LIGHTING": ("per 10 poles", 144_000, "street lighting"),
+    "DRAINAGE": ("per 100 m", 184_500, "drainage line"),
+    "TOILET_BLOCK": ("per unit", 279_000, "toilet block"),
+    "LIBRARY": ("per unit", 630_000, "library building"),
+    "BUS_SHELTER": ("per unit", 126_000, "bus shelter"),
+    "CREMATORIUM_SHED": ("per unit", 243_000, "crematorium shed"),
 }
 
 # Work types outside the MPLADS permissible list, used only to construct the
