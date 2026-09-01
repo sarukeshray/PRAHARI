@@ -17,6 +17,8 @@ from app.models.enums import (  # noqa: F401
     Role,
     SeverityTier,
     Stage,
+    SubmissionStatus,
+    SubmissionType,
     Terrain,
     UserAgencyType,
     WorkStatus,
@@ -40,6 +42,7 @@ from app.models.risk import (  # noqa: F401
 )
 from app.models.works import (  # noqa: F401
     AssetHandover,
+    CitizenSubmission,
     CompletionPhoto,
     LifecycleCheckin,
     MaintenanceRecommendation,
@@ -49,7 +52,8 @@ from app.models.works import (  # noqa: F401
 )
 
 __all__ = [
-    "MP", "Agency", "AgencyResponse", "AssetHandover", "CompletionPhoto", "CostIndex",
+    "MP", "Agency", "AgencyResponse", "AssetHandover", "CitizenSubmission",
+    "CompletionPhoto", "CostIndex",
     "District", "EngineConfig", "FlagReview", "LifecycleCheckin",
     "MaintenanceRecommendation", "ModuleContribution", "Payment", "ProgressReport",
     "RiskAssessment", "RiskFlag", "SORBenchmark", "User", "UserAgency", "Work",

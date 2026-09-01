@@ -8,6 +8,7 @@ import { Backtest } from '@/pages/district/Backtest'
 import { DistrictMap } from '@/pages/district/DistrictMap'
 import { HandoverQueue } from '@/pages/district/HandoverQueue'
 import { ReviewQueue } from '@/pages/district/ReviewQueue'
+import { Submissions } from '@/pages/district/Submissions'
 import { Trends } from '@/pages/district/Trends'
 import { WorkDetail } from '@/pages/district/WorkDetail'
 import { Landing } from '@/pages/Landing'
@@ -77,6 +78,14 @@ export default function App() {
         element={
           <RoleRoute allow={['DISTRICT_AUTHORITY']}>
             <HandoverQueue />
+          </RoleRoute>
+        }
+      />
+      <Route
+        path="/district/submissions"
+        element={
+          <RoleRoute allow={['DISTRICT_AUTHORITY']}>
+            <Submissions />
           </RoleRoute>
         }
       />

@@ -92,6 +92,7 @@ export const ROLE_NAV: Record<RoleKey, { to: string; label: string; end?: boolea
   DISTRICT_AUTHORITY: [
     { to: '/district', label: 'Review queue', end: true },
     { to: '/district/handovers', label: 'Handover queue' },
+    { to: '/district/submissions', label: 'Citizen submissions' },
     { to: '/district/map', label: 'District map' },
     { to: '/district/trends', label: 'Trends' },
     { to: '/district/backtest', label: 'CAG backtest' },

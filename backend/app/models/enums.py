@@ -141,3 +141,16 @@ class PlantedAnomaly(StrEnum):
     ENTITLEMENT_BREACH = "ENTITLEMENT_BREACH"
     QUOTA_SHORTFALL = "QUOTA_SHORTFALL"
     HANDOVER_GAP = "HANDOVER_GAP"
+
+
+class SubmissionType(StrEnum):
+    """What a member of the public is writing in about."""
+
+    WORK_SUGGESTION = "WORK_SUGGESTION"
+    WORK_CONCERN = "WORK_CONCERN"
+
+
+class SubmissionStatus(StrEnum):
+    RECEIVED = "RECEIVED"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    CLOSED = "CLOSED"

@@ -178,3 +178,45 @@ class MaintenanceRecommendation(Base):
 
     work: Mapped[Work] = relationship()
     user_agency: Mapped[UserAgency] = relationship()
+
+
+class CitizenSubmission(Base):
+    """Something a member of the public has written in about.
+
+    **Deliberately not a Work.** Under MPLADS only a Member of Parliament may
+    recommend a work; a citizen may suggest one. Writing public input straight
+    into ``works`` would let an unauthenticated submission enter the screening
+    pipeline and appear alongside sanctioned records, which is both wrong on the
+    scheme's own terms and an obvious hole. A submission is routed to the Member
+    and the District Authority as correspondence, and stops there.
+
+    Nothing here is screened by the engine and no submission ever changes a
+    work's state.
+    """
+
+    __tablename__ = "citizen_submissions"
+
+    submission_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    submission_type: Mapped[str] = mapped_column(String(24), index=True)
+
+    district_id: Mapped[str] = mapped_column(ForeignKey("districts.district_id"), index=True)
+    block: Mapped[str | None] = mapped_column(String(80), nullable=True)
+
+    #: Set only on a concern about an existing work; a suggestion has no work yet.
+    related_work_id: Mapped[str | None] = mapped_column(
+        ForeignKey("works.work_id"), nullable=True, index=True
+    )
+    suggested_work_type: Mapped[str | None] = mapped_column(String(48), nullable=True)
+
+    description: Mapped[str] = mapped_column(Text)
+    submitter_name: Mapped[str] = mapped_column(String(120))
+    #: Optional by design. A citizen should be able to raise something without
+    #: leaving a way to be contacted about it.
+    submitter_contact: Mapped[str | None] = mapped_column(String(160), nullable=True)
+
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    status: Mapped[str] = mapped_column(String(24), default="RECEIVED", index=True)
+    official_response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    responded_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    district: Mapped["District"] = relationship()  # noqa: F821

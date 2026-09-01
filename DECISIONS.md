@@ -536,3 +536,41 @@ Authority dashboard.
 beat to pick up the new credential". A timer standing in for a dependency is
 always a race; it only looked fine because the first sign-in of a session has no
 stale identity to inherit.
+
+---
+
+## D-025 — A citizen submission is correspondence, never a work
+
+**Phase:** MVP 4
+
+The public MPLADS portal lets a citizen put a work forward for their Member's
+consideration or raise something about one under way. That is now built, as a
+new `citizen_submissions` table with an unauthenticated `POST`.
+
+**The constraint that shaped it:** a submission never becomes a `Work`.
+
+Under the Scheme only a Member of Parliament may recommend a work, and only a
+District Authority may sanction one. Writing public input straight into `works`
+would have been the obvious implementation and is wrong twice over — it
+misstates who holds the power to recommend, and it lets an unauthenticated form
+feed the screening pipeline and sit alongside sanctioned records. A submission is
+routed to the Member and the District Authority as correspondence and stops
+there. Nothing about it is screened, scored, or able to change a work's state.
+
+The interface says this in the words a citizen reads, on the form and again on
+the receipt: *"A suggestion is not a sanctioned work."* Setting an expectation
+the Scheme cannot meet would be a worse failure than not building the feature.
+
+Other decisions worth recording:
+
+- **Contact details are optional**, and are not returned by `GET /submissions`.
+  Someone should be able to raise a concern without leaving a way to be
+  contacted about it, and an official reading the queue needs the substance, not
+  the address.
+- **A work reference is validated against the district**, so a concern cannot be
+  attached to a work in another district.
+- **Submissions are kept visibly apart from the review queue.** A finding is
+  something the engine computed against a threshold; a submission is a person's
+  account. Listing them together would blur a distinction the product depends on.
+- **This endpoint is unauthenticated and would need rate limiting in any real
+  deployment.** Length caps bound a single request; they do not bound a flood.

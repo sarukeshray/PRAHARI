@@ -43,6 +43,7 @@ import {
 } from '@/components/ui-kit'
 import { PendingButton, PendingTag, PlaceholderPanel } from '@/components/Placeholder'
 import { SyntheticDataBadge } from '@/components/SyntheticDataBadge'
+import { CitizenForm } from '@/pages/CitizenForm'
 import { downloadCsv } from '@/lib/csv'
 import { rupeesShort, shortDate } from '@/lib/format'
 import { MODULE_LABEL, flagTitle } from '@/lib/labels'
@@ -837,6 +838,8 @@ export function PublicView() {
           </Section>
         </>
       )}
+
+      <CitizenForm />
     </div>
   )
 }
