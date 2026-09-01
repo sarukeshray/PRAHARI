@@ -500,3 +500,39 @@ working control beats a convincing fake:
   state as the worst — a property of geography, not of the data. Circle *area*
   encodes the count, and every marker carries its figure so nothing depends on
   judging a circle by sight.
+
+---
+
+## D-024 — The signed-in identity is React state, not a module variable
+
+**Phase:** MVP 4 — bug fix
+
+**Symptom.** Signing in as any role except Public landed on the District
+Authority dashboard.
+
+**Cause.** Two mistakes compounding:
+
+1. The demo user id lived in a module-level variable in `api/client.ts`.
+   Changing it mutated nothing React was watching, so `SessionProvider` did not
+   re-render and the query stayed keyed to the previous identity.
+2. `SignIn` navigated on a 60 ms `setTimeout` — "give the session a beat to
+   catch up" — then the route guard read whatever identity was cached. If the
+   previous role's `/me` was still in the cache, `RoleRoute` saw
+   `DISTRICT_AUTHORITY`, decided the requested page was not allowed, and
+   redirected to that role's home. Every sign-in inherited whoever you were last.
+
+**Fix, in three parts:**
+
+- The user id is `useState` in `SessionProvider`, and it is part of the `/me`
+  query key, so a cached identity for one role can never be served to another.
+- `signIn` is `async` and resolves `/me` before returning. `SignIn` navigates to
+  `ROLE_HOME[identity.role]` — the role **the server confirmed**, not the one the
+  form selected. No timer.
+- `RoleRoute` distinguishes *no credential* (redirect to sign-in) from
+  *credential still resolving* (show the loading state). Redirecting during the
+  resolve window was what produced the wrong destination.
+
+**Worth stating plainly:** the original comment read "give the session query a
+beat to pick up the new credential". A timer standing in for a dependency is
+always a race; it only looked fine because the first sign-in of a session has no
+stale identity to inherit.

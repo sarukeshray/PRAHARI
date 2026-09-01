@@ -50,12 +50,22 @@ export function SignIn() {
   const account = DEMO_ACCOUNTS[role]
   const firebaseLive = health?.auth === 'firebase'
 
-  function submit(e: React.FormEvent) {
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
-    signIn(account.userId)
-    // Give the session query a beat to pick up the new credential.
-    window.setTimeout(() => navigate(ROLE_HOME[role]), 60)
+    setError(null)
+    try {
+      // Route to the role the SERVER confirms, not the one this form selected.
+      // Navigating on a timer and hoping the identity had caught up is what made
+      // every role land on whichever dashboard you used last.
+      const identity = await signIn(account.userId)
+      navigate(ROLE_HOME[identity.role], { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign in.')
+      setBusy(false)
+    }
   }
 
   return (
@@ -130,12 +140,16 @@ export function SignIn() {
             />
           </div>
 
+          {error && (
+            <p className="mt-3 text-[12px] text-[#ae1414]">{error}</p>
+          )}
+
           <button
             type="submit"
             disabled={busy}
             className="mt-5 w-full rounded-[2px] bg-seal px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50"
           >
-            Continue as {ROLE_LABEL[role]}
+            {busy ? 'Signing in…' : `Continue as ${ROLE_LABEL[role]}`}
           </button>
         </form>
 

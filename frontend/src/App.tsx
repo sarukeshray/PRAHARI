@@ -37,10 +37,12 @@ import { SignIn } from '@/pages/SignIn'
  * show them an error.
  */
 function RoleRoute({ allow, children }: { allow: RoleKey[]; children: React.ReactNode }) {
-  const { me, isLoading, isSignedIn } = useSession()
+  const { me, isResolving, isAnonymous } = useSession()
 
-  if (isLoading) return <Loading rows={6} label="Checking your sign-in" />
-  if (!isSignedIn || !me) return <Navigate to="/signin" replace />
+  // Order matters. Redirecting while the identity is still in flight is what
+  // sent every role to whichever dashboard was cached from the last sign-in.
+  if (isAnonymous) return <Navigate to="/signin" replace />
+  if (isResolving || !me) return <Loading rows={6} label="Checking your sign-in" />
   if (!allow.includes(me.role)) return <Navigate to={ROLE_HOME[me.role]} replace />
 
   return <AppShell>{children}</AppShell>
@@ -158,14 +160,6 @@ export default function App() {
       {/* State Nodal Authority */}
       <Route
         path="/state"
-        element={
-          <RoleRoute allow={['STATE_NODAL']}>
-            <StateOverview />
-          </RoleRoute>
-        }
-      />
-      <Route
-        path="/state/districts"
         element={
           <RoleRoute allow={['STATE_NODAL']}>
             <StateOverview />
