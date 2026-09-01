@@ -1,4 +1,5 @@
 import { useWeights } from '@/api/hooks'
+import { PlaceholderPanel } from '@/components/Placeholder'
 import { Bar, Loading, PageHeader, Section, Td, Th } from '@/components/ui-kit'
 
 /**
@@ -243,6 +244,17 @@ export function Backtest() {
         </Section>
       )}
       {weights.isPending && <Loading rows={2} label="Loading configuration" />}
+
+      <Section
+        title="Model training"
+        note="The Isolation Forest is currently fitted in-process each time the corpus is scored, which is reproducible but leaves no artefact a reviewer can inspect."
+      >
+        <PlaceholderPanel
+          title="Training notebook"
+          body="A standalone Colab notebook that generates the dataset, fits the model, plots the similarity-score distribution for known duplicate pairs against non-duplicates to justify the 0.82 cosine threshold empirically, and exports the fitted model. It reports the same recall figures shown above, from the same code path, so the notebook and this screen cannot disagree."
+          waitingOn="notebooks/prahari_model_training.ipynb"
+        />
+      </Section>
     </div>
   )
 }

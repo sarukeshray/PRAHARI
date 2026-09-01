@@ -40,7 +40,9 @@ import {
   Td,
   Th,
 } from '@/components/ui-kit'
+import { PendingButton, PendingTag, PlaceholderPanel } from '@/components/Placeholder'
 import { SyntheticDataBadge } from '@/components/SyntheticDataBadge'
+import { downloadCsv } from '@/lib/csv'
 import { rupeesShort, shortDate } from '@/lib/format'
 import { MODULE_LABEL, flagTitle } from '@/lib/labels'
 import { useSession } from '@/lib/session'
@@ -223,6 +225,17 @@ export function StateEscalations() {
               </div>
               <div className="mt-1 text-[12.5px] font-medium">{flagTitle(f.flag_code)}</div>
               <p className="mt-0.5 text-[12px] leading-snug text-ink-muted">{f.explanation}</p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <PendingButton title="Reassignment arrives with the escalation build">
+                  Reassign reviewer
+                </PendingButton>
+                <PendingButton title="Escalation arrives with the escalation build">
+                  Escalate to Ministry
+                </PendingButton>
+                <span className="text-[11px] text-ink-faint">
+                  Neither changes the finding's state — they move whose queue it sits in.
+                </span>
+              </div>
             </li>
           ))}
         </ul>
@@ -243,7 +256,48 @@ export function AgencyWorks() {
         eyebrow="Assigned to this agency"
         title="My works"
         meta="Works this agency is executing, with anything raised against them."
+        actions={
+          <button
+            type="button"
+            disabled={!works.data?.length}
+            onClick={() =>
+              downloadCsv(
+                `my-works-${new Date().toISOString().slice(0, 10)}.csv`,
+                (works.data ?? []) as unknown as Record<string, unknown>[],
+                [
+                  'work_id', 'work_type', 'block', 'estimated_cost', 'status',
+                  'severity_tier', 'open_flag_count', 'primary_finding',
+                ],
+              )
+            }
+            className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal disabled:opacity-40"
+          >
+            Export CSV
+          </button>
+        }
       />
+
+      <div className="grid gap-4 border-b border-rule bg-paper px-5 py-5 lg:grid-cols-2">
+        <PlaceholderPanel
+          title="Submit a progress report"
+          body="File physical progress against a work, which is one half of the comparison the disbursement module makes. Reports are currently seeded with the dataset rather than entered here."
+          waitingOn="POST /works/{id}/progress"
+        >
+          <PendingButton title="Progress submission arrives with the agency write build">
+            File a report
+          </PendingButton>
+        </PlaceholderPanel>
+
+        <PlaceholderPanel
+          title="Upload a completion photograph"
+          body="The file goes to Firebase Storage and the backend then re-reads it to extract GPS and capture time. The metadata is never taken from the browser: the party uploading the photograph is the party the geotag check exists to verify."
+          waitingOn="Firebase Storage — see docs/FIREBASE_SETUP.md"
+        >
+          <PendingButton title="Photo upload needs a configured Firebase project">
+            Choose a photograph
+          </PendingButton>
+        </PlaceholderPanel>
+      </div>
       {works.isPending && <Loading rows={8} label="Loading works" />}
       {works.data?.length === 0 && (
         <EmptyState title="No works assigned" body="Works assigned to this agency will appear here." />
@@ -325,6 +379,15 @@ export function AgencyFindings() {
               <p className="mt-1 border-l-2 border-rule-strong pl-3 text-[12.5px] leading-relaxed">
                 {f.explanation}
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <PendingButton title="Agency responses arrive with the evidence build">
+                  Respond with evidence
+                </PendingButton>
+                <span className="text-[11px] text-ink-faint">
+                  A response attaches evidence for the District Authority to weigh. It never clears
+                  the finding.
+                </span>
+              </div>
             </li>
           ))}
         </ul>
@@ -533,6 +596,11 @@ export function UserAgencyAssets() {
                       rows={2}
                       className="mt-2 w-full resize-y rounded-[2px] border border-rule-strong bg-surface px-2.5 py-1.5 text-[12.5px] focus:border-seal"
                     />
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-[11px] text-ink-faint">
+                        Attach a photograph <PendingTag label="Firebase" />
+                      </span>
+                    </div>
                     <div className="mt-2 flex justify-end gap-2">
                       <button
                         type="button"

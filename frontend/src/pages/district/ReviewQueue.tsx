@@ -13,6 +13,7 @@ import {
   Th,
   WorkLink,
 } from '@/components/ui-kit'
+import { downloadCsv } from '@/lib/csv'
 import { MODULE_LABEL } from '@/lib/labels'
 import { rupeesShort, shortDate } from '@/lib/format'
 import { useSession } from '@/lib/session'
@@ -49,6 +50,26 @@ export function ReviewQueue() {
           summary.data
             ? `${summary.data.open_findings} findings awaiting a decision · ${summary.data.works_screened.toLocaleString('en-IN')} of ${summary.data.works_total.toLocaleString('en-IN')} works screened`
             : 'Loading district position…'
+        }
+        actions={
+          <button
+            type="button"
+            disabled={!works.data?.length}
+            onClick={() =>
+              downloadCsv(
+                `review-queue-${new Date().toISOString().slice(0, 10)}.csv`,
+                (works.data ?? []) as unknown as Record<string, unknown>[],
+                [
+                  'work_id', 'work_type', 'block', 'estimated_cost', 'status',
+                  'severity_tier', 'composite_score', 'open_flag_count',
+                  'primary_finding_title', 'primary_finding', 'days_open',
+                ],
+              )
+            }
+            className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal disabled:opacity-40"
+          >
+            Export queue
+          </button>
         }
       />
 

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 
 import { useFlags, useNational, useUpdateWeights, useWeights } from '@/api/hooks'
+import { FundFlowSankey } from '@/components/FundFlowSankey'
+import { NationalMap } from '@/components/NationalMap'
+import { PendingButton } from '@/components/Placeholder'
+import { downloadCsv } from '@/lib/csv'
 import {
   EmptyState,
   ErrorState,
@@ -49,8 +53,22 @@ export function MinistryOverview() {
       </div>
 
       <Section
+        title="Risk density by state"
+        note="Circle area is the number of open critical findings; position is the state centroid. A proportional-symbol map rather than a filled choropleth, because a choropleth colours a whole state by one number and the eye reads the largest state as the worst — which is a property of geography, not of the data."
+      >
+        <NationalMap states={data.states} />
+      </Section>
+
+      <Section
+        title="Where the money stops"
+        note="Sanctioned value against what has actually reached implementing agencies. The narrowing is the finding: idle funds are the Scheme's most consistently documented problem, and unlike anything else on this page it can be measured without inferring intent."
+      >
+        <FundFlowSankey states={data.states} />
+      </Section>
+
+      <Section
         title="Fund utilisation by state"
-        note="The share of sanctioned value accounted for by released funds. Persistent under-utilisation is the Scheme's most consistently documented problem, and is measurable without inferring anything about intent."
+        note="The share of sanctioned value accounted for by released funds."
       >
         <div className="max-w-3xl space-y-2">
           {[...data.states]
@@ -80,6 +98,25 @@ export function MinistryOverview() {
       <Section
         title="Open findings by state"
         note="A high count is a workload signal, not a judgement about a state — a state that screens more works will raise more findings."
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  `prahari-states-${new Date().toISOString().slice(0, 10)}.csv`,
+                  data.states as unknown as Record<string, unknown>[],
+                )
+              }
+              className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal"
+            >
+              Export CSV
+            </button>
+            <PendingButton title="Formatted PDF export arrives with the reporting build">
+              Audit-ready PDF
+            </PendingButton>
+          </div>
+        }
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] border-collapse text-[12.5px]">

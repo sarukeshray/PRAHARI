@@ -461,3 +461,42 @@ The backtest screen's sensitivity figures remain literals, regenerated from
 `python -m app.engine.cli recall` rather than computed live — they describe a
 specific scored corpus, and recomputing them per page load would invite them to
 drift from the run they document.
+
+---
+
+## D-023 — Unbuilt features ship as labelled scaffolding, not fakes
+
+**Phase:** MVP 4
+
+Screens that are designed but not yet wired render through a shared
+`PlaceholderPanel` / `PendingButton` treatment: a dashed border, a "next build"
+tag, and a line naming what the feature is waiting on.
+
+Two rules hold everywhere it is used, and they are the point:
+
+1. **A placeholder never displays invented data.** It shows the shape of a
+   screen — a form, a button, a panel — never a made-up finding, score or
+   amount. Fabricating those would undermine the one thing this product asks to
+   be trusted on, and a juror who spots one invented number will reasonably
+   doubt every real one.
+2. **It says what it is waiting on**, so a gap reads as a roadmap item rather
+   than a defect.
+
+Currently scaffolded: photo upload with server-side EXIF (needs Firebase),
+progress-report submission, agency responses to findings, flag reassignment and
+escalation, formatted PDF export, and the training notebook.
+
+**Built for real instead of stubbed**, because each was close to free and a
+working control beats a convincing fake:
+
+- **CSV export** on the review queue, the agency's works and the state roll-up.
+  Exports exactly the filtered rows on screen, BOM-prefixed so Excel renders
+  rupee symbols correctly.
+- **Fund-flow Sankey** on the Ministry overview, computed from the same state
+  roll-up the table beneath it uses. The narrowing between sanctioned and
+  released is the finding.
+- **National map** as a proportional-symbol map rather than a filled choropleth.
+  A choropleth colours a whole state by one number, so the eye reads the largest
+  state as the worst — a property of geography, not of the data. Circle *area*
+  encodes the count, and every marker carries its figure so nothing depends on
+  judging a circle by sight.
