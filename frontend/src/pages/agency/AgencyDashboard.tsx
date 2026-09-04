@@ -165,7 +165,8 @@ function UpdatePanel({ work, onDone }: { work: WorkSummary; onDone: () => void }
       body.append('stage', stage)
       body.append('file', file)
       const demo = getDemoUser()
-      const res = await fetch(`/api/v1/agency/works/${work.work_id}/photos`, {
+      const base = import.meta.env.VITE_API_BASE_URL ?? ''
+      const res = await fetch(`${base}/api/v1/agency/works/${work.work_id}/photos`, {
         method: 'POST',
         headers: demo ? { 'X-Demo-User': demo } : {},
         body,

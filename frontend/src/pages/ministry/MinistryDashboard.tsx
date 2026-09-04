@@ -112,7 +112,7 @@ export function MinistryOverview() {
               Export CSV
             </button>
             <a
-              href="/api/v1/reports/district/RJ-UDR.pdf"
+              href={`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/reports/district/RJ-UDR.pdf`}
               className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal"
               title="Open findings for a district, as a filed document"
             >

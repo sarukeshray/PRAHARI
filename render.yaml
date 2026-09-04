@@ -1,0 +1,44 @@
+# Render blueprint. Import this repo at dashboard.render.com/blueprints and it
+# creates both services; you then set two environment variables by hand, because
+# each service needs the other's URL and neither exists until the first deploy.
+#
+# See docs/HOSTING.md for the full walkthrough.
+
+services:
+  - type: web
+    name: prahari-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: starter          # free tier will OOM during scoring; starter is 512 MB
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENV
+        value: production
+      - key: DB_BACKEND
+        value: sqlite
+      # Set after the frontend deploys, e.g. https://prahari.onrender.com
+      - key: CORS_ORIGINS
+        sync: false
+    disk:
+      # Without this the SQLite file and uploaded photographs are wiped on every
+      # redeploy, and boot.py spends two minutes reseeding each time.
+      name: prahari-data
+      mountPath: /app/data
+      sizeGB: 1
+
+  - type: web
+    name: prahari
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Set after the API deploys, e.g. https://prahari-api.onrender.com
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      # Single-page app: every path must return index.html so a deep link works.
+      - type: rewrite
+        source: /*
+        destination: /index.html

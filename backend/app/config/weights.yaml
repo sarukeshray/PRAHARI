@@ -43,6 +43,12 @@ thresholds:
 
   # DUPLICATE
   DUPLICATE_COSINE: 0.82
+  # Used only when the sentence-transformer is unavailable and the character
+  # n-gram fallback is active. That backend scores on a different scale, so
+  # reusing 0.82 would silently switch duplicate detection off rather than
+  # degrading it. Calibrated on the corpus: true duplicates sit at a 5th
+  # percentile of 0.75, random pairs at a 99th percentile of 0.41.
+  DUPLICATE_COSINE_FALLBACK: 0.55
   DUPLICATE_DISTANCE_M: 500
   DUPLICATE_WINDOW_DAYS: 365
   SPLIT_CLUSTER_EPS_M: 300

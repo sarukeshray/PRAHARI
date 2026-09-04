@@ -7,7 +7,15 @@
  * has them, so switching one on does not require changing calling code.
  */
 
-const BASE = '/api/v1'
+/**
+ * Where the API lives.
+ *
+ * Empty in development, so requests go to `/api/v1` and Vite proxies them to the
+ * local backend. In a deployment the frontend and backend sit on different
+ * origins, so VITE_API_BASE_URL carries the backend's address and the backend
+ * must list this origin in CORS_ORIGINS.
+ */
+const BASE = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`
 
 let demoUserId: string | null = localStorage.getItem('prahari.demoUser')
 let idTokenProvider: (() => Promise<string | null>) | null = null

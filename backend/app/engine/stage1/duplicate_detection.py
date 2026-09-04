@@ -21,6 +21,7 @@ from collections import defaultdict
 from app.engine.base import Finding, ModuleResult, score_from_exceedance
 from app.engine.context import EngineContext
 from app.engine.explain import rupees
+from app.engine.similarity import backend as similarity_backend
 from app.engine.similarity import similarity as text_similarity
 from app.geo_utils import haversine_m
 from app.models.enums import ModuleCode, SeverityTier
@@ -41,7 +42,13 @@ def evaluate(work: Work, ctx: EngineContext) -> ModuleResult:
     if work.recommended_date is None:
         return ModuleResult(MODULE, 0.0, [])
 
-    cos_limit = ctx.config.t("DUPLICATE_COSINE")
+    # The threshold follows the backend that produced the score. See the note in
+    # weights.yaml: the two live on different scales.
+    cos_limit = (
+        ctx.config.t("DUPLICATE_COSINE_FALLBACK")
+        if "fallback" in similarity_backend()
+        else ctx.config.t("DUPLICATE_COSINE")
+    )
     dist_limit = ctx.config.t("DUPLICATE_DISTANCE_M")
     window = ctx.config.t("DUPLICATE_WINDOW_DAYS")
 

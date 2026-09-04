@@ -35,3 +35,6 @@ frontend/.env.local
 # Uploaded photographs and any supplied reference data stay local.
 backend/data/
 backend/sample.pdf
+
+# Deployment artefacts should not carry a local database.
+backend/data/uploads/

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     #: in production, so an unauthenticated build cannot reach a deployment.
     env: str = "development"
 
+    #: Comma-separated origins allowed to call the API. The dev server is always
+    #: permitted; a deployment adds its frontend URL here.
+    cors_origins: str = ""
+
     # --- Firebase ---
     firebase_enabled: bool = False
     firebase_credentials_path: str = "app/config/firebase_credentials.json"
@@ -37,6 +41,12 @@ class Settings(BaseSettings):
         if self.db_backend == "postgres":
             return self.postgres_url
         return f"sqlite:///{self.sqlite_path}"
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        local = ["http://localhost:5173", "http://127.0.0.1:5173"]
+        extra = [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
+        return local + extra
 
     @property
     def credentials_file(self) -> Path:

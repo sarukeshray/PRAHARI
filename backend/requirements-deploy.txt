@@ -1,0 +1,31 @@
+# Deployment requirements — the full stack minus PyTorch.
+#
+# requirements.txt installs sentence-transformers, which pulls in PyTorch: about
+# 2.5 GB and more RAM than any free hosting tier provides. Everything else in
+# the engine is unaffected.
+#
+# The duplicate module falls back to character n-gram similarity automatically
+# and uses its own calibrated threshold (DUPLICATE_COSINE_FALLBACK in
+# weights.yaml). Measured on the corpus: 20/20 planted duplicates still caught,
+# 1 in 120 clean works flagged. Reworded duplicates are the weak spot — the
+# fallback matches text, not meaning.
+#
+# /api/v1/engine/weights reports which backend is live, so it is never ambiguous.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+SQLAlchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
+
+pandas==2.2.3
+numpy==2.2.1
+scikit-learn==1.6.0
+PyYAML==6.0.2
+
+Pillow==12.3.0
+reportlab==4.2.5
+python-multipart==0.0.20

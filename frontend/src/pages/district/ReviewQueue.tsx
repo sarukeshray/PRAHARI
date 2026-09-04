@@ -54,7 +54,7 @@ export function ReviewQueue() {
         actions={
           <>
           <a
-            href={`/api/v1/reports/district/${districtId}.pdf`}
+            href={`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/reports/district/${districtId}.pdf`}
             className="rounded-[2px] border border-rule-strong px-2.5 py-1 text-[12px] hover:border-seal hover:text-seal"
           >
             Findings PDF
